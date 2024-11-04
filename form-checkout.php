@@ -27,8 +27,8 @@ if ( ! $checkout->is_registration_enabled() && $checkout->is_registration_requir
 	return;
 }
 
+wc_print_notices();
 ?>
-
 <form name="checkout" method="post" class="checkout woocommerce-checkout custom-multistep" action="<?php echo esc_url( wc_get_checkout_url() ); ?>" enctype="multipart/form-data">
 
 	<?php if ( $checkout->get_checkout_fields() ) : ?>
@@ -41,9 +41,15 @@ if ( ! $checkout->is_registration_enabled() && $checkout->is_registration_requir
 				<span class="step-count" data-count="1">1</span>
 				<span>Checkout</span>
 			</li>
+			<li>
+				<hr>
+			</li>
 			<li id="nav-step-2">
 				<span class="step-count" data-count="2">2</span>
 				<span>Details</span>
+			</li>
+			<li>
+				<hr>
 			</li>
 			<li id="nav-step-3">
 				<span class="step-count" data-count="3">3</span>
@@ -59,14 +65,16 @@ if ( ! $checkout->is_registration_enabled() && $checkout->is_registration_requir
 					<div class="woocommerce-error"></div>
 				</div>
 
-				<?php do_action( 'woocommerce_checkout_billing' ); ?>
+				<?php 
+				do_action( 'woocommerce_checkout_billing' ); 
+				?>
 				<button type="button" id="next-step-1" class="button">Continue to delivery details</button>
 			</div>
 
 			<!-- Step 2: Shipping Details -->
 			<div id="step-2" class="checkout-step" style="display: none;">
 				<div class="woocommerce-notices">
-				<div class="woocommerce-error"></div>
+					<div class="woocommerce-error"></div>
 				</div>
 
 				<?php 
@@ -74,6 +82,7 @@ if ( ! $checkout->is_registration_enabled() && $checkout->is_registration_requir
 					function sanitize_field_value($value) {
 						return $value === 'undefined' ? '' : $value;
 					}
+
 					// Display billing_country dropdown (required)
 					woocommerce_form_field('billing_country', array(
 						'type'        => 'select',
@@ -82,6 +91,7 @@ if ( ! $checkout->is_registration_enabled() && $checkout->is_registration_requir
 						'options'     => WC()->countries->get_allowed_countries(),
 						'default'     => sanitize_field_value($checkout->get_value('billing_country')),
 					), sanitize_field_value($checkout->get_value('billing_country')));
+
 					// Display billing_address_1 (required)
 					woocommerce_form_field('billing_address_1', array(
 						'type'        => 'text',
@@ -89,6 +99,7 @@ if ( ! $checkout->is_registration_enabled() && $checkout->is_registration_requir
 						'required'    => true,
 						'default'     => sanitize_field_value($checkout->get_value('billing_address_1')),
 					), sanitize_field_value($checkout->get_value('billing_address_1')));
+
 					// Display billing_address_2 (optional)
 					woocommerce_form_field('billing_address_2', array(
 						'type'        => 'text',
@@ -96,21 +107,25 @@ if ( ! $checkout->is_registration_enabled() && $checkout->is_registration_requir
 						'required'    => false,  // This field is optional
 						'default'     => sanitize_field_value($checkout->get_value('billing_address_2')),
 					), sanitize_field_value($checkout->get_value('billing_address_2')));
+
 					// Display billing_city (required)
 					woocommerce_form_field('billing_city', array(
 						'type'        => 'text',
-						'label'       => __('City', 'woocommerce'),
+						'label'       => __('Town / City', 'woocommerce'),
 						'required'    => true,
 						'default'     => sanitize_field_value($checkout->get_value('billing_city')),
 					), sanitize_field_value($checkout->get_value('billing_city')));
+
 					// Display billing_state dropdown (required)
+					$states = WC()->countries->get_states($checkout->get_value('billing_country'));
 					woocommerce_form_field('billing_state', array(
 						'type'        => 'select',
 						'label'       => __('State', 'woocommerce'),
 						'required'    => true,
-						'options'     => WC()->countries->get_states($checkout->get_value('billing_country')),
+						'options'     => !empty($states) ? $states : array('No State' => __('Select a state', 'woocommerce')),
 						'default'     => sanitize_field_value($checkout->get_value('billing_state')),
 					), sanitize_field_value($checkout->get_value('billing_state')));
+
 					// Display billing_postcode (required)
 					woocommerce_form_field('billing_postcode', array(
 						'type'        => 'text',
@@ -119,6 +134,7 @@ if ( ! $checkout->is_registration_enabled() && $checkout->is_registration_requir
 						'default'     => sanitize_field_value($checkout->get_value('billing_postcode')),
 					), sanitize_field_value($checkout->get_value('billing_postcode')));
 				?>
+				
 				<?php do_action( 'woocommerce_checkout_shipping' ); ?>
 				<!-- <button type="button" id="prev-step-2" class="button">Previous</button> -->
 				<button type="button" id="next-step-2" class="button">CONTINUE TO PAYMENT METHOD</button>
@@ -138,8 +154,13 @@ if ( ! $checkout->is_registration_enabled() && $checkout->is_registration_requir
 			<div id="order_review" class="woocommerce-checkout-review-order">
 				<h3 id="order_review_heading"><?php esc_html_e( 'Order Summary', 'woocommerce' ); ?></h3>
 				<?php do_action( 'woocommerce_checkout_before_order_review' ); ?>
+				<?php do_action( 'woocommerce_checkout_coupon' ); ?>
+				
+				
 				<?php do_action( 'woocommerce_checkout_order_review' ); ?>
+				<?php do_action( 'woocommerce_checkout_after_order_review' ); ?>
 				<?php do_action( 'woocommerce_before_checkout_form', $checkout ); ?>
+
 			</div>
 			<?php do_action( 'woocommerce_checkout_after_order_review' ); ?>
 			<button type="button" id="prev-step-3" class="button">Previous</button>
@@ -176,9 +197,17 @@ document.addEventListener('DOMContentLoaded', function() {
 
 	function validateStep(stepId) {
         let isValid = true;
-		console.log(stepId);
 		if(!window.checked && stepId == "step-1"){
-			var fields = document.querySelectorAll(`#${stepId} input:not(input[id*="shipping"])`);
+			const excludeSelectors = ['#f_billing_country', '#f_billing_address_1', '#f_billing_address_2', '#f_billing_city', '#f_billing_state', '#f_billing_postcode', '#billing_state', '#billing_country'];
+			const exclusionSelector = excludeSelectors.map(sel => `input${sel}`).join(', ');
+			// console.log(exclusionSelector);
+
+			var fields = document.querySelectorAll(`#${stepId} input:not(input[id*="shipping"],${exclusionSelector})`);
+			fields = Array.from(fields).filter(field => {
+				const style = window.getComputedStyle(field);
+				// console.log(style);
+				return style.display !== 'none';
+			});
 		}else{
 			var fields = document.querySelectorAll(`#${stepId} input`);
 		}
@@ -186,13 +215,31 @@ document.addEventListener('DOMContentLoaded', function() {
 		if (notices) {
             notices.innerHTML = '';
         }
-
+		
+		//console.log(fields);
         fields.forEach(field => {
 			var required = field.parentNode.parentNode.querySelector('abbr');
 			var required = required?required.getAttribute('title'):false;
 			var fieldName = field.parentNode.parentNode.querySelector('label').textContent.replace(/\*/g, '').trim();//innerHTML;
 
-			console.log({fields,required})
+			// Additional logic for #billing_phone validation
+			if (field.id === 'billing_phone') {
+				const phoneValue = field.value.trim();
+				const phoneRegex = /^[0-9]{10}$/; // Example: 10-digit phone number
+				if (!phoneValue.match(phoneRegex)) {
+					isValid = false;
+					field.parentNode.parentNode.classList.add('woocommerce-invalid');
+
+					const notice = document.createElement('div');
+					notice.innerHTML = `Please enter a valid 10-digit phone number for ${fieldName}.`;
+					if (notices) {
+						notices.appendChild(notice);
+					}
+
+					return isValid;
+				}
+			}
+			// console.log({fields,required})
             if (required && !field.value.trim()) {  //field.required && 
                 isValid = false;
                 field.parentNode.parentNode.classList.add('woocommerce-invalid');
@@ -212,7 +259,7 @@ document.addEventListener('DOMContentLoaded', function() {
 		
 		document.querySelector('.checkout-steps-nav').scrollIntoView({ behavior: 'smooth' });
         return isValid;
-    } 
+    }
 
     nextButtons.forEach(button => {
         button.addEventListener('click', function() {
@@ -275,14 +322,14 @@ jQuery(document).ready(function($) {
     // Function to copy billing data to shipping fields
     function copyBillingToShipping() {
         if ($('#ship-to-different-address-checkbox').prop('checked') === false) {
-            $('#shipping_first_name').val($('#billing_first_name').val());
-            $('#shipping_last_name').val($('#billing_last_name').val());
-            $('#shipping_address_1').val($('#billing_address_1').val());
-            $('#shipping_address_2').val($('#billing_address_2').val());
-            $('#shipping_city').val($('#billing_city').val());
-            $('#shipping_postcode').val($('#billing_postcode').val());
-            $('#shipping_country').val($('#billing_country').val()).trigger('change');
-            $('#shipping_state').val($('#billing_state').val()).trigger('change');
+            $('#shipping_first_name').val($('#billing_first_name:last-child').val());
+            $('#shipping_last_name').val($('#billing_last_name:last-child').val());
+            $('#shipping_address_1').val($('#billing_address_1:last-child').val());
+            $('#shipping_address_2').val($('#billing_address_2:last-child').val());
+            $('#shipping_city').val($('#billing_city:last-child').val());
+            $('#shipping_postcode').val($('#billing_postcode:last-child').val());
+            $('#shipping_country').val($('#billing_country:last-child').val()).trigger('change');
+            $('#shipping_state').val($('#billing_state:last-child').val()).trigger('change');
         }
     }
     $(document).ready(function() {
@@ -304,10 +351,88 @@ jQuery(document).ready(function($) {
             $('#shipping_state').val('');
         }
     });
-	var back = `<a href="<?php echo wc_get_cart_url();?>"><i class="fa fa-angle-left" aria-hidden="true"></i> Cart</a>`;
-	var text = `<span><i class="fa fa-lock" aria-hidden="true"></i><span>Secure Checkout</span></span>`;
+
+
+
+
+
+
+	var back = `<a href="<?php echo wc_get_cart_url();?>" style="text-decoration:none;"><i class="fa fa-angle-left" aria-hidden="true"></i> <span>cart</span></a>`;
+	var text = `<span><i class="fa fa-lock" aria-hidden="true"></i><span>secure checkout</span></span>`;
 	$('.header-col-3').html(text);
 	$('.header-col-2').html(back);
 });
+
+</script>
+
+<script type="text/javascript">
+	jQuery(document).ready(function($) {
+		$('button[name=apply_coupon]').on('click', function() {
+			var $thisButton = $(this); // Store reference to the button
+			$thisButton.prop('disabled', true);
+			var couponCode = $('input#coupon_code').val();
+			// Send AJAX request to apply coupon
+			$.ajax({
+				type: 'POST',
+				url: '<?php echo esc_url( admin_url('admin-ajax.php') ); ?>',
+				data: {
+					action: 'apply_coupon',
+					coupon_code: couponCode,
+				},
+				success: function(response) {
+					if (response.success) {
+						// console.log(response.success);
+					}
+					$('body').trigger('update_checkout');
+					$thisButton.prop('disabled', false);
+				},
+				error: function() {
+					console.log('An error occurred. Please try again.'); // Error handling
+					$thisButton.prop('disabled', false);
+				}
+			});
+		});
+
+		
+    	$('button[name="apply_coupon"]').attr('type', 'button');
+
+	});
+	
+	/* Code To Add Country & State Fields Validations And Fixing */
+	jQuery(function($) {
+		var selectedValue = $('#billing_state').val();
+		if (selectedValue !== "No State") {
+			$('#billing_state').parent().parent().show(); // Show the message if a state is selected
+		} else {
+			$('#billing_state').parent().parent().hide(); // Hide the message if "No State" is selected
+		}
+		$('form.checkout').on('change', 'select#billing_country', function() {
+			$('body').trigger('update_checkout');
+			var country = $(this).val();
+			$('select#billing_state').parent().parent().show();
+
+			if (typeof wc_country_select_params !== 'undefined') {
+				$('select#billing_state').empty(); 
+				country_data = JSON.parse(wc_country_select_params.countries);
+				console.log(country_data);
+				if (country_data[country]) {
+					$('select#billing_state').parent().parent().show();
+					console.log(country_data[country]);
+					$.each(country_data[country], function(stateCode, stateName) {
+						$('select#billing_state').append(
+							$('<option></option>').attr('value', stateCode).text(stateName)
+						);
+					});
+				} else{
+					// $('select#billing_state').append(
+					// 	$('<option></option>').text("Select an state")
+					// );
+					$('select#billing_state').parent().parent().hide();
+				}
+			}
+		});
+	});
+
+
 
 </script>
